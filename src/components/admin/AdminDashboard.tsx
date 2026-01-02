@@ -49,9 +49,10 @@ export function AdminDashboard() {
         .from('orders')
         .select('*', { count: 'exact', head: true });
 
-      const { data: ordersData } = await supabase
+      const ordersRes = await (supabase as any)
         .from('orders')
         .select('total_amount');
+      const ordersData = ordersRes.data as any[] | null;
 
       const totalRevenue = ordersData?.reduce((sum, order) => sum + order.total_amount, 0) || 0;
 

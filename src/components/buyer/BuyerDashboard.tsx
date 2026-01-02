@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useCart } from '../../contexts/CartContext';
 import { Search, Filter, Star, ShoppingCart, TrendingUp } from 'lucide-react';
+import { CartSidebar } from '../cart/CartSidebar';
 
 interface Product {
   id: string;
@@ -20,6 +22,9 @@ export function BuyerDashboard() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [cartOpen, setCartOpen] = useState(false);
+  const [addingToCart, setAddingToCart] = useState<string | null>(null);
+  const { addToCart, itemCount } = useCart();
 
   useEffect(() => {
     loadProducts();
@@ -53,11 +58,45 @@ export function BuyerDashboard() {
     product.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleAddToCart = async (product: Product) => {
+    setAddingToCart(product.id);
+    try {
+      await addToCart(product.id, null, 1, product.base_price);
+      // Success feedback
+    } catch (error) {
+      alert('Failed to add to cart');
+    } finally {
+      setAddingToCart(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <CartSidebar
+        isOpen={cartOpen}
+        onClose={() => setCartOpen(false)}
+        onCheckout={() => {
+          // Navigate to checkout
+          console.log('Navigate to checkout');
+        }}
+      />
+
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <h1 className="text-4xl font-bold mb-4">Discover Amazing Products</h1>
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-4xl font-bold">Discover Amazing Products</h1>
+            <button
+              onClick={() => setCartOpen(true)}
+              className="relative bg-white/10 hover:bg-white/20 p-3 rounded-lg transition"
+            >
+              <ShoppingCart className="w-6 h-6" />
+              {itemCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
+                  {itemCount}
+                </span>
+              )}
+            </button>
+          </div>
           <p className="text-blue-100 text-lg mb-8">Shop from thousands of sellers worldwide</p>
 
           <div className="max-w-3xl">
@@ -139,7 +178,11 @@ export function BuyerDashboard() {
                       </span>
                     </div>
 
-                    <button className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition">
+                    <button
+                      onClick={() => handleAddToCart(product)}
+                      disabled={addingToCart === product.id}
+                      className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                    >
                       <ShoppingCart className="w-4 h-4" />
                     </button>
                   </div>

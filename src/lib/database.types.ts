@@ -431,6 +431,168 @@ export interface Database {
           created_at?: string;
         };
       };
+
+      seller_documents: {
+        Row: {
+          id: string;
+          seller_id: string;
+          document_type: string;
+          document_url: string;
+          verification_status: string;
+          uploaded_at: string;
+        };
+        Insert: {
+          id?: string;
+          seller_id: string;
+          document_type: string;
+          document_url: string;
+          verification_status?: string;
+          uploaded_at?: string;
+        };
+        Update: {
+          id?: string;
+          seller_id?: string;
+          document_type?: string;
+          document_url?: string;
+          verification_status?: string;
+          uploaded_at?: string;
+        };
+      };
+
+      seller_reviews: {
+        Row: {
+          id: string;
+          seller_id: string;
+          user_id: string;
+          order_id: string;
+          rating: number;
+          comment: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          seller_id: string;
+          user_id: string;
+          order_id: string;
+          rating: number;
+          comment?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          seller_id?: string;
+          user_id?: string;
+          order_id?: string;
+          rating?: number;
+          comment?: string;
+          created_at?: string;
+        };
+      };
+
+      transactions: {
+        Row: {
+          id: string;
+          order_id: string;
+          transaction_type: string;
+          amount: number;
+          currency: string;
+          payment_method: string;
+          status: string;
+          gateway_reference: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          transaction_type: string;
+          amount: number;
+          currency?: string;
+          payment_method?: string;
+          status?: string;
+          gateway_reference?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          transaction_type?: string;
+          amount?: number;
+          currency?: string;
+          payment_method?: string;
+          status?: string;
+          gateway_reference?: string | null;
+          created_at?: string;
+        };
+      };
+
+      seller_payouts: {
+        Row: {
+          id: string;
+          seller_id: string;
+          amount: number;
+          currency: string;
+          status: string;
+          payout_date: string | null;
+          reference: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          seller_id: string;
+          amount: number;
+          currency?: string;
+          status?: string;
+          payout_date?: string | null;
+          reference?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          seller_id?: string;
+          amount?: number;
+          currency?: string;
+          status?: string;
+          payout_date?: string | null;
+          reference?: string | null;
+          created_at?: string;
+        };
+      };
+
+      disputes: {
+        Row: {
+          id: string;
+          order_id: string;
+          raised_by: string;
+          dispute_type: string;
+          description: string;
+          status: string;
+          resolution: string | null;
+          created_at: string;
+          resolved_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          raised_by: string;
+          dispute_type: string;
+          description: string;
+          status?: string;
+          resolution?: string | null;
+          created_at?: string;
+          resolved_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          raised_by?: string;
+          dispute_type?: string;
+          description?: string;
+          status?: string;
+          resolution?: string | null;
+          created_at?: string;
+          resolved_at?: string | null;
+        };
+      };
     };
   };
 }

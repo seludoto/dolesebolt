@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Package, DollarSign, ShoppingBag, TrendingUp, Plus, AlertCircle } from 'lucide-react';
+import { Package, DollarSign, ShoppingBag, TrendingUp, Plus, AlertCircle, BarChart3 } from 'lucide-react';
+import { SellerOnboarding } from './SellerOnboarding';
+import { ProductManager } from './ProductManager';
+import { OrderManagement } from './OrderManagement';
+import { AnalyticsDashboard } from './AnalyticsDashboard';
 
 interface SellerStats {
   totalProducts: number;
@@ -29,6 +33,7 @@ export function SellerDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'analytics'>('overview');
 
   useEffect(() => {
     loadSellerData();
@@ -38,11 +43,13 @@ export function SellerDashboard() {
     if (!user) return;
 
     try {
-      const { data: sellerData, error: sellerError } = await supabase
+      const sellerRes = (await (supabase as any)
         .from('sellers')
         .select('*')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .maybeSingle());
+      const sellerData = sellerRes.data;
+      const sellerError = sellerRes.error;
 
       if (sellerError) throw sellerError;
 
@@ -54,26 +61,27 @@ export function SellerDashboard() {
 
       setSeller(sellerData);
 
-      const { count: productsCount } = await supabase
+      const { count: productsCount } = await (supabase as any)
         .from('products')
         .select('*', { count: 'exact', head: true })
         .eq('seller_id', sellerData.id);
 
-      const { count: ordersCount } = await supabase
+      const { count: ordersCount } = await (supabase as any)
         .from('order_items')
         .select('*', { count: 'exact', head: true })
         .eq('seller_id', sellerData.id);
 
-      const { count: pendingCount } = await supabase
+      const { count: pendingCount } = await (supabase as any)
         .from('order_items')
         .select('*', { count: 'exact', head: true })
         .eq('seller_id', sellerData.id)
         .eq('status', 'pending');
 
-      const { data: revenueData } = await supabase
+      const revenueRes = await (supabase as any)
         .from('order_items')
         .select('total_price')
         .eq('seller_id', sellerData.id);
+      const revenueData = revenueRes.data as any[] | null;
 
       const totalRevenue = revenueData?.reduce((sum, item) => sum + item.total_price, 0) || 0;
 
@@ -102,22 +110,10 @@ export function SellerDashboard() {
   }
 
   if (showOnboarding) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Package className="w-8 h-8 text-blue-600" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Complete Your Seller Profile</h2>
-          <p className="text-gray-600 mb-8">
-            To start selling on Dolese, you need to complete your seller profile and verification process.
-          </p>
-          <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition">
-            Complete Profile
-          </button>
-        </div>
-      </div>
-    );
+    return <SellerOnboarding onComplete={() => {
+      setShowOnboarding(false);
+      loadSellerData();
+    }} />;
   }
 
   return (
@@ -146,86 +142,161 @@ export function SellerDashboard() {
               </div>
             </div>
           </div>
-          <button className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Add Product
+          {activeTab === 'products' && (
+            <button 
+              onClick={() => {/* Will be handled by ProductManager */}}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Add Product
+            </button>
+          )}
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="bg-white rounded-xl shadow-sm mb-8 p-2 flex gap-2 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition ${
+              activeTab === 'overview'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <TrendingUp className="w-5 h-5" />
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('products')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition ${
+              activeTab === 'products'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <Package className="w-5 h-5" />
+            Products
+          </button>
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition ${
+              activeTab === 'orders'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <ShoppingBag className="w-5 h-5" />
+            Orders
+            {stats.pendingOrders > 0 && (
+              <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                {stats.pendingOrders}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition ${
+              activeTab === 'analytics'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <BarChart3 className="w-5 h-5" />
+            Analytics
           </button>
         </div>
 
-        {seller?.verification_status !== 'verified' && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-8 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-semibold text-yellow-900 mb-1">Complete Verification</h3>
-              <p className="text-sm text-yellow-800">
-                Your account is pending verification. Complete the verification process to start selling.
-              </p>
+        {/* Content Area */}
+        {activeTab === 'overview' && (
+          <>
+            {seller?.verification_status !== 'verified' && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-8 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-yellow-900 mb-1">Complete Verification</h3>
+                  <p className="text-sm text-yellow-800">
+                    Your account is pending verification. Complete the verification process to start selling.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Package className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <TrendingUp className="w-5 h-5 text-green-500" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900 mb-1">{stats.totalProducts}</div>
+                <div className="text-sm text-gray-600">Total Products</div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <ShoppingBag className="w-6 h-6 text-green-600" />
+                  </div>
+                  <TrendingUp className="w-5 h-5 text-green-500" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900 mb-1">{stats.totalOrders}</div>
+                <div className="text-sm text-gray-600">Total Orders</div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                    <DollarSign className="w-6 h-6 text-yellow-600" />
+                  </div>
+                  <TrendingUp className="w-5 h-5 text-green-500" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900 mb-1">
+                  ${stats.totalRevenue.toFixed(2)}
+                </div>
+                <div className="text-sm text-gray-600">Total Revenue</div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                    <AlertCircle className="w-6 h-6 text-red-600" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-gray-900 mb-1">{stats.pendingOrders}</div>
+                <div className="text-sm text-gray-600">Pending Orders</div>
+              </div>
             </div>
-          </div>
+
+            <div className="bg-white rounded-xl shadow-sm p-6 text-center">
+              <p className="text-gray-500 mb-4">Quick actions to get started</p>
+              <div className="flex gap-4 justify-center flex-wrap">
+                <button
+                  onClick={() => setActiveTab('products')}
+                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium"
+                >
+                  Manage Products
+                </button>
+                <button
+                  onClick={() => setActiveTab('orders')}
+                  className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 font-medium"
+                >
+                  View Orders
+                </button>
+                <button
+                  onClick={() => setActiveTab('analytics')}
+                  className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 font-medium"
+                >
+                  View Analytics
+                </button>
+              </div>
+            </div>
+          </>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Package className="w-6 h-6 text-blue-600" />
-              </div>
-              <TrendingUp className="w-5 h-5 text-green-500" />
-            </div>
-            <div className="text-2xl font-bold text-gray-900 mb-1">{stats.totalProducts}</div>
-            <div className="text-sm text-gray-600">Total Products</div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <ShoppingBag className="w-6 h-6 text-green-600" />
-              </div>
-              <TrendingUp className="w-5 h-5 text-green-500" />
-            </div>
-            <div className="text-2xl font-bold text-gray-900 mb-1">{stats.totalOrders}</div>
-            <div className="text-sm text-gray-600">Total Orders</div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-yellow-600" />
-              </div>
-              <TrendingUp className="w-5 h-5 text-green-500" />
-            </div>
-            <div className="text-2xl font-bold text-gray-900 mb-1">
-              ${stats.totalRevenue.toFixed(2)}
-            </div>
-            <div className="text-sm text-gray-600">Total Revenue</div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <AlertCircle className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
-            <div className="text-2xl font-bold text-gray-900 mb-1">{stats.pendingOrders}</div>
-            <div className="text-sm text-gray-600">Pending Orders</div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Orders</h2>
-            <div className="text-center py-8 text-gray-500">
-              No recent orders to display
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Top Products</h2>
-            <div className="text-center py-8 text-gray-500">
-              No products to display
-            </div>
-          </div>
-        </div>
+        {activeTab === 'products' && <ProductManager />}
+        {activeTab === 'orders' && <OrderManagement />}
+        {activeTab === 'analytics' && <AnalyticsDashboard />}
       </div>
     </div>
   );
